@@ -1,0 +1,279 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Fonte padrão - Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Variáveis CSS baseadas no design guide */
+:root {
+  /* Cores Primárias */
+  --wiseia-primary: #2A4B7C;
+  --wiseia-primary-light: #F0F4F8;
+  
+  /* Cores Neutras */
+  --wiseia-text-primary: #1F2937;
+  --wiseia-text-secondary: #4B5563;
+  --wiseia-text-muted: #9CA3AF;
+  --wiseia-border: #E5E7EB;
+  --wiseia-bg-white: #FFFFFF;
+  --wiseia-bg-light: #F9FAFB;
+  
+  /* Cores de Feedback */
+  --wiseia-success: #10B981;
+  --wiseia-warning: #F59E0B;
+  --wiseia-error: #EF4444;
+  --wiseia-info: #3B82F6;
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--wiseia-bg-light);
+  color: var(--wiseia-text-primary);
+  line-height: 1.5;
+}
+
+/* Tipografia customizada */
+.text-wiseia-primary {
+  color: var(--wiseia-primary);
+}
+
+.bg-wiseia-primary {
+  background-color: var(--wiseia-primary);
+}
+
+.border-wiseia-primary {
+  border-color: var(--wiseia-primary);
+}
+
+/* Componentes customizados */
+.wiseia-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+}
+
+.wiseia-button-primary {
+  @apply inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-md transition-colors;
+  background-color: var(--wiseia-primary);
+}
+
+.wiseia-button-primary:hover {
+  background-color: #1e3a5f;
+}
+
+.wiseia-button-secondary {
+  @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors border;
+  color: var(--wiseia-primary);
+  border-color: var(--wiseia-primary);
+  background-color: var(--wiseia-bg-white);
+}
+
+.wiseia-button-secondary:hover {
+  background-color: var(--wiseia-primary-light);
+}
+
+.wiseia-input {
+  @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent;
+}
+
+.wiseia-input:focus {
+  border-color: var(--wiseia-primary);
+  --tw-ring-color: var(--wiseia-primary);
+}
+
+/* Estados de loading */
+.wiseia-loading {
+  @apply animate-pulse;
+}
+
+.wiseia-skeleton {
+  @apply bg-gray-200 rounded;
+}
+
+/* Animações customizadas */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wiseia-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Scrollbar customizada */
+.wiseia-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wiseia-scrollbar::-webkit-scrollbar-track {
+  background: var(--wiseia-bg-light);
+}
+
+.wiseia-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--wiseia-border);
+  border-radius: 3px;
+}
+
+.wiseia-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--wiseia-text-muted);
+}
+
+/* Estados de foco melhorados */
+.wiseia-focus {
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+.wiseia-focus:focus {
+  --tw-ring-color: var(--wiseia-primary);
+}
+
+/* Badges de status */
+.wiseia-badge-success {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  background-color: var(--wiseia-success);
+  color: white;
+}
+
+.wiseia-badge-warning {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  background-color: var(--wiseia-warning);
+  color: white;
+}
+
+.wiseia-badge-error {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  background-color: var(--wiseia-error);
+  color: white;
+}
+
+.wiseia-badge-info {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  background-color: var(--wiseia-info);
+  color: white;
+}
+
+/* Utilities para truncar texto */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* Melhorias de acessibilidade */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Estados de hover melhorados */
+.wiseia-hover-lift {
+  @apply transition-transform duration-200;
+}
+
+.wiseia-hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Grid responsivo personalizado */
+.wiseia-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+/* Estilos para notificações/toasts */
+.wiseia-toast {
+  @apply rounded-lg shadow-lg border;
+  background-color: var(--wiseia-bg-white);
+  border-color: var(--wiseia-border);
+}
+
+/* Media queries para melhor responsividade */
+@media (max-width: 640px) {
+  .wiseia-container {
+    @apply px-4;
+  }
+  
+  .wiseia-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Estilos para dark mode (futuro) */
+@media (prefers-color-scheme: dark) {
+  /* Preparado para implementação futura de dark mode */
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .wiseia-card {
+    break-inside: avoid;
+  }
+}
+
+/* Melhorias para high contrast mode */
+@media (prefers-contrast: high) {
+  .wiseia-button-primary {
+    border: 2px solid currentColor;
+  }
+  
+  .wiseia-input {
+    border-width: 2px;
+  }
+}
+
+/* Redução de motion para usuários sensíveis */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .wiseia-fade-in {
+    animation: none;
+  }
+}
