@@ -1,8 +1,11 @@
-import { useState } from 'react'
-import { Navigate, Link } from 'react-router-dom'
+// ARQUIVO CORRIGIDO: src/pages/LoginPage.tsx
+
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { Shield, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -17,33 +20,37 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginPage() {
   const { user, signIn, loading } = useAuth()
+  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
+  
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   })
 
-  // Redirecionar se já estiver logado
-  if (user && !loading) {
-    return <Navigate to="/dashboard" replace />
-  }
+  // Redireciona se o usuário já estiver logado
+  useEffect(() => {
+    if (user && !loading) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, loading, navigate])
+
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      setIsSubmitting(true)
       await signIn(data.email, data.password)
-    } catch (error) {
-      // Erro já é tratado no contexto com toast
-    } finally {
-      setIsSubmitting(false)
+      toast.success('Login realizado com sucesso!')
+      // A navegação será tratada pelo useEffect acima
+    } catch (error: any) {
+      toast.error(error.message || 'E-mail ou senha inválidos.')
     }
   }
 
+  // O resto do arquivo (a parte visual) é o mesmo.
+  // ...
   return (
     <div className="min-h-screen flex">
       {/* Lado esquerdo - Formulário */}
