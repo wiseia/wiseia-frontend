@@ -1,13 +1,33 @@
+// ARQUIVO CORRIGIDO: src/components/layout/Header.tsx
+
 import { useState } from 'react'
 import { Bell, Menu, Search, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getRoleDisplayName, getInitials } from '@/lib/utils'
+// As funções 'getRoleDisplayName' e 'getInitials' provavelmente não existem, então vamos usar os dados diretamente por enquanto
+// import { getRoleDisplayName, getInitials } from '@/lib/utils'
 
 export function Header() {
   const { userInfo, signOut } = useAuth()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
-  if (!userInfo) return null
+  // Função simples para pegar iniciais
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name) return '?'
+    const names = name.split(' ')
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+
+
+  if (!userInfo || !userInfo.user_roles) {
+    // Adicionamos uma verificação extra para garantir que user_roles existe
+    return null
+  }
+
+  // CORREÇÃO AQUI: Pegamos o nome do papel do objeto aninhado
+  const roleName = userInfo.user_roles.role_name;
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -53,7 +73,6 @@ export function Header() {
             >
               <span className="sr-only">Ver notificações</span>
               <Bell className="h-6 w-6" />
-              {/* Badge de notificações */}
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
                 3
               </span>
@@ -80,21 +99,31 @@ export function Header() {
 
               {/* Dropdown do perfil */}
               {showProfileMenu && (
-                <div className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5">
+                <div 
+                  className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5"
+                  onMouseLeave={() => setShowProfileMenu(false)} // Para fechar o menu ao tirar o mouse
+                >
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 truncate">
                       {userInfo.full_name}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {getRoleDisplayName(userInfo.role_name)}
+                    <p className="text-xs text-gray-500 capitalize">
+                      {/* CORREÇÃO AQUI */}
+                      {roleName.toLowerCase()}
                     </p>
                   </div>
-                  <button
-                    onClick={signOut}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Sair
-                  </button>
+                  {/* CORREÇÃO AQUI: Envolvemos o botão em um 'div' para melhor comportamento */}
+                  <div>
+                    <button
+                      onClick={async () => {
+                        await signOut();
+                        setShowProfileMenu(false); // Fecha o menu após clicar
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Sair
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
