@@ -14,7 +14,7 @@ import { DocumentsPage } from '@/pages/DocumentsPage';
 import { UploadPage } from '@/pages/UploadPage';
 import { UsersPage } from '@/pages/UsersPage';
 import { CompaniesPage } from '@/pages/CompaniesPage';
-import { DepartmentsPage } from '@/pages/DepartmentsPage'; // <<< NOVA IMPORTAÇÃO
+import { DepartmentsPage } from '@/pages/DepartmentsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { AuthCallback } from '@/pages/AuthCallback';
 
@@ -24,6 +24,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        {/* O Toaster foi movido para fora do Router para evitar conflitos de renderização. */}
+        <Toaster position="top-right" richColors closeButton />
+        
         <Router>
           <Routes>
             {/* Rota pública */}
@@ -48,7 +51,7 @@ function App() {
               <Route path="upload" element={<UploadPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="companies" element={<CompaniesPage />} />
-              <Route path="departments" element={<DepartmentsPage />} /> {/* <<< NOVA ROTA */}
+              <Route path="departments" element={<DepartmentsPage />} />
               <Route path="settings" element={<SettingsPage />} />
 
             </Route>
@@ -56,7 +59,6 @@ function App() {
             {/* Rota de fallback para qualquer caminho não encontrado */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
-          <Toaster position="top-right" richColors closeButton />
         </Router>
       </AuthProvider>
     </QueryClientProvider>
