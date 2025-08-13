@@ -1,58 +1,40 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { toast } from 'sonner'
+// ARQUIVO NOVO: src/pages/AuthCallback.tsx
+
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { toast } from 'sonner';
 
 export function AuthCallback() {
-  const navigate = useNavigate()
+  const { session } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
-      try {
-        const hashFragment = window.location.hash
-
-        if (hashFragment && hashFragment.length > 0) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(hashFragment)
-
-          if (error) {
-            console.error('Error exchanging code for session:', error.message)
-            toast.error('Erro na autenticação: ' + error.message)
-            navigate('/login?error=' + encodeURIComponent(error.message))
-            return
-          }
-
-          if (data.session) {
-            toast.success('Login realizado com sucesso!')
-            navigate('/dashboard')
-            return
-          }
-        }
-
-        // Se chegou aqui, algo deu errado
-        toast.error('Sessão não encontrada')
-        navigate('/login?error=No session found')
-      } catch (error) {
-        console.error('Auth callback error:', error)
-        toast.error('Erro inesperado na autenticação')
-        navigate('/login')
-      }
+    // A lógica de troca de token é gerenciada pelo onAuthStateChange no AuthContext.
+    // Aqui, nós apenas esperamos a sessão ser estabelecida e então redirecionamos.
+    // O onAuthStateChange do Supabase vai pegar o evento de login via OAuth e
+    // os tokens serão armazenados automaticamente na sessão do Supabase.
+    
+    // Se, após um curto período, a sessão estiver disponível, significa que o login foi um sucesso.
+    if (session) {
+      toast.success("Conectado com sucesso!");
+      // Redireciona o usuário de volta para a página de onde ele veio ou para o dashboard.
+      navigate('/settings', { replace: true });
     }
+    
+    // Poderíamos adicionar um timeout aqui para lidar com casos de erro, mas vamos manter simples por agora.
 
-    handleAuthCallback()
-  }, [navigate])
+  }, [session, navigate]);
+
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <LoadingSpinner size="lg" className="mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Processando autenticação...
-        </h2>
-        <p className="text-gray-600">
-          Aguarde enquanto validamos suas credenciais.
-        </p>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      <LoadingSpinner size="lg" />
+      <h1 className="mt-6 text-xl font-semibold text-gray-700">
+        Processando autorização...
+      </h1>
+      <p className="mt-2 text-gray-500">Por favor, aguarde.</p>
     </div>
-  )
+  );
 }

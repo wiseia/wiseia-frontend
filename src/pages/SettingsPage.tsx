@@ -1,41 +1,78 @@
-import { useAuth } from '@/contexts/AuthContext'
-import { Settings as SettingsIcon } from 'lucide-react'
+// ARQUIVO NOVO E COMPLETO: src/pages/SettingsPage.tsx
+
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/Button';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { GoogleIcon } from '@/components/ui/GoogleIcon'; // Criaremos este ícone
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export function SettingsPage() {
-  const { userInfo } = useAuth()
+  const { userInfo } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-  const canManageSettings = userInfo && (
-    userInfo.role_name === 'SUPERUSER' || 
-    userInfo.role_name === 'MASTER'
-  )
+  // Esta função irá iniciar o fluxo de autorização do Google
+  const handleConnectGoogleDrive = async () => {
+    setLoading(true);
+    try {
+      // Pedimos ao Supabase para gerar a URL de autorização do Google.
+      // É mais seguro fazer isso do que construir a URL no frontend.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          // A URL para onde o Google deve redirecionar o usuário após a autorização
+          redirectTo: `${window.location.origin}/auth/callback`,
+          // As permissões que estamos pedindo
+          scopes: 'https://www.googleapis.com/auth/drive.file',
+          // Importante: Pede um refresh_token para que possamos manter o acesso offline
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        },
+      });
 
-  if (!canManageSettings) {
-    return (
-      <div className="text-center py-12">
-        <SettingsIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Acesso Restrito</h3>
-        <p className="text-gray-600">
-          Apenas superusuários e masters podem gerenciar configurações.
-        </p>
-      </div>
-    )
-  }
+      if (error) throw error;
+      // O Supabase se encarrega de redirecionar para a URL gerada
+      
+    } catch (error: any) {
+      toast.error('Erro ao conectar com Google', { description: error.message });
+      setLoading(false);
+    }
+  };
+
+  // Por enquanto, não vamos listar as integrações, apenas permitir a conexão.
+  const isMaster = userInfo?.role_name === 'MASTER';
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
-        <p className="mt-2 text-gray-600">
-          {userInfo.role_name === 'SUPERUSER' 
-            ? 'Configurações globais da plataforma'
-            : 'Configurações da empresa'
-          }
-        </p>
+        <p className="mt-2 text-gray-600">Gerencie as integrações e configurações da sua empresa.</p>
       </div>
-      
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <p className="text-gray-600">Funcionalidade de configurações em desenvolvimento.</p>
+
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h2 className="text-xl font-semibold mb-4">Integrações de Armazenamento</h2>
+        <div className="border-t pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <GoogleIcon className="w-8 h-8 mr-4" />
+              <div>
+                <h3 className="font-semibold text-gray-800">Google Drive</h3>
+                <p className="text-sm text-gray-500">Faça upload e gerencie documentos diretamente no seu Drive.</p>
+              </div>
+            </div>
+            <div>
+              {isMaster && (
+                <Button onClick={handleConnectGoogleDrive} disabled={loading}>
+                  {loading ? <LoadingSpinner size="sm" /> : "Conectar"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,13 +1,24 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { ErrorBoundary } from './components/ErrorBoundary.tsx'
-import './index.css'
-import App from './App.tsx'
+// src/main.tsx
 
-createRoot(document.getElementById('root')!).render(
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import { AuthProvider } from './contexts/AuthContext.tsx';
+import App from './App.tsx';
+
+import './index.css';
+
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Failed to find the root element');
+
+const root = createRoot(rootElement);
+
+root.render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </ErrorBoundary>
-  </StrictMode>,
-)
+  </StrictMode>
+);

@@ -1,61 +1,39 @@
-// ARQUIVO CORRIGIDO: src/lib/supabase.ts
+// ARQUIVO FINAL E CORRETO: src/lib/supabase.ts
 
 import { createClient } from '@supabase/supabase-js'
 
-// 1. Configuração do Cliente Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('As variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY precisam ser definidas.')
+  throw new Error('Variáveis de ambiente do Supabase não definidas.')
 }
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// 2. Tipos TypeScript ATUALIZADOS para o nosso NOVO e CORRIGIDO schema
-
+// --- TIPOS DE DADOS ---
 export interface UserRole {
-  id: number
-  role_name: string
-  hierarchy_level: number
-}
-
-export interface Company {
-  id: string
-  name: string
-  created_at: string
-}
-
-export interface Department {
-  id: string
-  company_id: string
-  name: string
-  created_at: string
-}
-
-export interface UserProfile {
-  id: string // UUID do usuário na tabela 'users'
-  auth_id: string // UUID do usuário na tabela 'auth.users'
-  company_id: string | null
-  department_id: string | null
-  role_id: number | null
-  email: string
-  full_name: string | null
+  id: number;
+  role_name: string;
+  hierarchy_level: number;
 }
 
 export interface Document {
-  id: string
-  company_id: string
-  department_id: string | null
-  name: string
-  file_path: string
-  file_type: string
-  file_size: number
-  uploaded_by: string
-  created_at: string
+  id: string;
+  name: string;
+  file_type: string;
+  created_at: string;
+  file_size: number;
 }
 
-// 3. Informações do Usuário Logado (UserInfo) - Objeto que combina tudo
+export interface UserProfile {
+  id: string;
+  company_id: string | null;
+  department_id: string | null;
+  role_id: number | null;
+  email: string;
+  full_name: string | null;
+}
+
+// A interface que combina o perfil com o papel
 export interface FullUserInfo extends UserProfile {
-  user_roles: UserRole | null; // O objeto completo do papel do usuário
+  user_roles: UserRole;
 }
