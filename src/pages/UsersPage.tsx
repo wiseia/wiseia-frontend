@@ -1,4 +1,4 @@
-// ARQUIVO COMPLETO E ATUALIZADO: src/pages/UsersPage.tsx
+// ARQUIVO COMPLETO E CORRIGIDO: src/pages/UsersPage.tsx
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,35 +6,32 @@ import { Users, Plus, MoreHorizontal } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
-import { EditUserModal } from './users/EditUserModal'; // Importando o novo modal
+import { EditUserModal } from './users/EditUserModal';
+import { InviteUserModal } from './users/InviteUserModal';
 
 export function UsersPage() {
   const { userInfo } = useAuth();
   const { data: users, isLoading, error } = useUsers();
+
+  // Estados que estavam faltando
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
-  // Verificação de segurança para garantir que userInfo e user_roles estão carregados
+  // Verificação de segurança
   if (!userInfo || !userInfo.user_roles) {
     return <div className="flex justify-center p-8"><LoadingSpinner /></div>;
   }
 
   const canManage = userInfo.user_roles.hierarchy_level <= 2;
 
-  // Função para abrir o modal de edição
   const handleEdit = (user: any) => {
     setSelectedUser(user);
     setIsEditModalOpen(true);
   };
 
   if (!canManage) {
-    return (
-      <div className="text-center py-12">
-        <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Acesso Restrito</h3>
-        <p className="text-gray-600">Você não tem permissão para gerenciar usuários.</p>
-      </div>
-    );
+    return <div className="text-center py-12"><p>Você não tem permissão para gerenciar usuários.</p></div>;
   }
 
   return (
@@ -44,7 +41,7 @@ export function UsersPage() {
           <h1 className="text-3xl font-bold text-gray-900">Usuários</h1>
           <p className="mt-2 text-gray-600">Gerencie os usuários e suas permissões.</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsInviteModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Convidar Usuário
         </Button>
@@ -84,9 +81,7 @@ export function UsersPage() {
                       {user.status === 'active' ? 'Ativo' : 'Pendente'}
                     </span>
                   </td>
-
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {/* Botão de ações que chama a função handleEdit */}
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
@@ -97,8 +92,7 @@ export function UsersPage() {
           </table>
         </div>
       </div>
-
-      {/* Renderiza o modal de edição se um usuário estiver selecionado */}
+      
       {selectedUser && (
         <EditUserModal 
           isOpen={isEditModalOpen} 
@@ -106,6 +100,11 @@ export function UsersPage() {
           user={selectedUser}
         />
       )}
+      
+      <InviteUserModal 
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+      />
     </div>
   );
 }

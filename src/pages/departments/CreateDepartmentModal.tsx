@@ -34,11 +34,7 @@ export function CreateDepartmentModal({ isOpen, onClose }: CreateDepartmentModal
     queryKey: ['departments', userInfo?.company_id],
     queryFn: async () => {
       if (!userInfo?.company_id) return [];
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name')
-        .eq('company_id', userInfo.company_id)
-        .is('parent_department_id', null);
+      const { data, error } = await supabase.from('departments').select('id, name').eq('company_id', userInfo.company_id).is('parent_department_id', null);
       if (error) throw new Error(error.message);
       return data;
     },
@@ -48,15 +44,11 @@ export function CreateDepartmentModal({ isOpen, onClose }: CreateDepartmentModal
   const createDepartmentMutation = useMutation({
     mutationFn: async (newDepartment: DepartmentFormData) => {
       if (!userInfo?.company_id) throw new Error('Empresa do usuário não encontrada.');
-      
-      const { error } = await supabase.from('departments').insert([
-        {
-          name: newDepartment.name,
-          company_id: userInfo.company_id,
-          // CORREÇÃO CRÍTICA: Garante que uma string vazia se torne null
-          parent_department_id: newDepartment.parent_department_id || null,
-        },
-      ]);
+      const { error } = await supabase.from('departments').insert([{
+        name: newDepartment.name,
+        company_id: userInfo.company_id,
+        parent_department_id: newDepartment.parent_department_id || null,
+      }]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -79,21 +71,18 @@ export function CreateDepartmentModal({ isOpen, onClose }: CreateDepartmentModal
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
-        <h2 className="text-xl font-bold mb-2">Novo Departamento / Divisão</h2>
-        <p className="text-sm text-gray-500 mb-6">Crie uma nova área organizacional.</p>
+        <h2 className="text-xl font-bold mb-6">Novo Departamento / Divisão</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label htmlFor="name">Nome</label>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome</label>
             <input id="name" {...register('name')} className="mt-1 block w-full border border-gray-300 rounded-md p-2"/>
             {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>}
           </div>
           <div>
-            <label htmlFor="parent_department_id">É uma Divisão de (Opcional)</label>
+            <label htmlFor="parent_department_id" className="block text-sm font-medium text-gray-700">É uma Divisão de (Opcional)</label>
             <select id="parent_department_id" {...register('parent_department_id')} className="mt-1 block w-full bg-white border border-gray-300 rounded-md p-2">
               <option value="">Nenhum (é um Departamento principal)</option>
-              {departments?.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))}
+              {departments?.map((dept) => (<option key={dept.id} value={dept.id}>{dept.name}</option>))}
             </select>
           </div>
           <div className="flex justify-end space-x-3 pt-4">

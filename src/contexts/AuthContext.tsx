@@ -1,4 +1,4 @@
-// ARQUIVO FINAL, ROBUSTO E À PROVA DE FALHAS: src/contexts/AuthContext.tsx
+// ARQUIVO FINAL E SIMPLIFICADO: src/contexts/AuthContext.tsx
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -31,10 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: userData, error: userError } = await supabase.from('users').select('*').eq('id', authUser.id).single();
       if (userError) throw userError;
-      
       const { data: roleData, error: roleError } = await supabase.from('user_roles').select('*').eq('id', userData.role_id).single();
       if (roleError) throw roleError;
-      
       return { ...userData, user_roles: roleData as UserRole };
     } catch (err: any) {
       console.error("Erro ao buscar perfil:", err.message);
@@ -43,56 +41,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    let isMounted = true;
-    let authListener: any = null;
-
-    // Função auto-executável para lidar com a verificação inicial
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!isMounted) return;
-
-        setUser(session?.user ?? null);
-        const profile = await fetchUserProfile(session?.user ?? null);
-        if (!isMounted) return;
-        setUserInfo(profile);
-        
-      } catch (err) {
-        if (isMounted) setUserInfo(null);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-
-      const { data: listener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (event === 'INITIAL_SESSION') return;
-          if (!isMounted) return;
-
-          setUser(session?.user ?? null);
-          const profile = await fetchUserProfile(session?.user ?? null);
-          setUserInfo(profile);
-        }
-      );
-      authListener = listener;
-    })();
-
-    return () => {
-      isMounted = false;
-      if (authListener?.subscription) {
-        authListener.subscription.unsubscribe();
-      }
+    // Apenas verifica a sessão ao carregar a primeira vez
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      const profile = await fetchUserProfile(session?.user ?? null);
+      setUserInfo(profile);
+      setLoading(false);
     };
+
+    checkUser();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) toast.error(error.message);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error(error.message);
+    } else if (data.user) {
+      // Após o login, busca os dados manualmente
+      setUser(data.user);
+      const profile = await fetchUserProfile(data.user);
+      setUserInfo(profile);
+    }
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Limpa o estado manualmente
+    setUser(null);
+    setUserInfo(null);
   };
 
   const value = { user, userInfo, loading, signIn, signOut };

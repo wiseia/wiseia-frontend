@@ -1,17 +1,16 @@
-// ARQUIVO COMPLETO E CORRIGIDO: src/pages/users/EditUserModal.tsx
+// ARQUIVO COMPLETO E ATUALIZADO: src/pages/users/EditUserModal.tsx
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext'; // A importação que faltava
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDepartmentPermissions, useGrantPermission, useRevokePermission } from '@/hooks/usePermissions';
-import { Trash2, PlusCircle } from 'lucide-react';
-import { useEffect } from 'react';
+import { Trash2 } from 'lucide-react';
 
 const editUserSchema = z.object({
   full_name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),
@@ -30,25 +29,20 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
   const { userInfo } = useAuth();
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<EditUserFormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
+    defaultValues: { full_name: user.full_name || '', role_id: user.user_roles?.id?.toString() || '' },
   });
-  
-  useEffect(() => {
-    if (user && isOpen) {
-      reset({ full_name: user.full_name || '', role_id: user.user_roles?.id?.toString() || '' });
-    }
-  }, [user, isOpen, reset]);
 
   const { data: allRoles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_roles').select('*').order('hierarchy_level');
+      const { data, error } = await supabase.from('user_roles').select('*');
       if (error) throw new Error(error.message);
       return data;
-    },
+    }
   });
-
+  
   const { data: allDepartments } = useQuery({
     queryKey: ['departments', userInfo?.company_id],
     queryFn: async () => {
@@ -56,7 +50,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
       const { data, error } = await supabase.from('departments').select('id, name').eq('company_id', userInfo.company_id);
       if (error) throw new Error(error.message);
       return data;
-    },
+    }
   });
   
   const { data: userPermissions, isLoading: isLoadingPermissions } = useDepartmentPermissions(user.id);
@@ -88,7 +82,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
       role_id: parseInt(data.role_id),
     });
   };
-  
+
   const handleGrantPermission = () => {
     const selectElement = document.getElementById('new_permission_department_id') as HTMLSelectElement;
     const departmentId = selectElement.value;
@@ -98,79 +92,66 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
         target_department_id: departmentId,
         granted_by_user_id: userInfo.id,
       });
-      selectElement.value = "";
-    } else {
-      toast.info("Por favor, selecione um departamento.");
     }
   };
   
   const handleRevokePermission = (permissionId: string) => {
-    if (window.confirm("Tem certeza que deseja revogar esta permissão?")) {
-      // CORREÇÃO: Passamos o objeto com os dois IDs necessários para a mutação
-      revokePermissionMutation.mutate({ permissionId: permissionId, userId: user.id });
-    }
+    revokePermissionMutation.mutate(permissionId, {
+      onSuccess: () => {
+        toast.success('Permissão revogada com sucesso!');
+        queryClient.invalidateQueries({ queryKey: ['permissions', user.id] });
+      }
+    });
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-2">Editar Usuário</h2>
         <p className="text-sm text-gray-500 mb-6">{user.email}</p>
-
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="border-b pb-6">
             <h3 className="text-lg font-medium mb-4">Informações Básicas</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Nome Completo</label>
-                <input id="full_name" {...register('full_name')} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"/>
-                {errors.full_name && <p className="text-sm text-red-600 mt-1">{errors.full_name.message}</p>}
-              </div>
-              <div>
-                <label htmlFor="role_id" className="block text-sm font-medium text-gray-700">Papel (Role)</label>
-                <select id="role_id" {...register('role_id')} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md">
-                  {allRoles?.map((role) => (<option key={role.id} value={role.id}>{role.role_name}</option>))}
-                </select>
-                {errors.role_id && <p className="text-sm text-red-600 mt-1">{errors.role_id.message}</p>}
-              </div>
+            <div>
+              <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Nome Completo</label>
+              <input id="full_name" {...register('full_name')} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"/>
+              {errors.full_name && <p className="text-sm text-red-600 mt-1">{errors.full_name.message}</p>}
+            </div>
+            <div className="mt-4">
+              <label htmlFor="role_id" className="block text-sm font-medium text-gray-700">Papel (Role)</label>
+              <select id="role_id" {...register('role_id')} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md">
+                {allRoles?.map((role) => (<option key={role.id} value={role.id}>{role.role_name}</option>))}
+              </select>
+              {errors.role_id && <p className="text-sm text-red-600 mt-1">{errors.role_id.message}</p>}
             </div>
           </div>
-          
           <div className="pt-4">
             <h3 className="text-lg font-medium">Permissões Especiais de Acesso</h3>
-            <p className="text-sm text-gray-500 mb-4">Conceda acesso a departamentos específicos (ex: Qualidade).</p>
-            
-            <div className="space-y-2 mb-4 border rounded-md p-4">
-              <h4 className="font-medium text-sm text-gray-600">Acessos Concedidos:</h4>
+            <p className="text-sm text-gray-500 mb-4">Conceda acesso a departamentos específicos.</p>
+            <div className="space-y-2 mb-4">
               {isLoadingPermissions ? <LoadingSpinner size="sm" /> :
                userPermissions?.map((perm: any) => (
                 <div key={perm.id} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
-                  <span className="text-sm">Acesso ao departamento: <span className="font-semibold">{perm.department?.name || 'Departamento não encontrado'}</span></span>
+                  <span className="text-sm">Acesso a: <span className="font-semibold">{perm.department.name}</span></span>
                   <Button variant="ghost" size="sm" onClick={() => handleRevokePermission(perm.id)}>
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 </div>
               ))}
-              {userPermissions?.length === 0 && !isLoadingPermissions && <p className="text-sm text-gray-400 text-center py-2">Nenhuma permissão especial.</p>}
+              {userPermissions?.length === 0 && <p className="text-sm text-gray-400 text-center py-2">Nenhuma permissão especial.</p>}
             </div>
-
-            <div className="flex items-end space-x-2 p-4 border-t">
-              <div className="flex-1">
-                <label htmlFor="new_permission_department_id" className="text-sm font-medium">Conceder acesso a:</label>
-                <select id="new_permission_department_id" className="mt-1 block w-full bg-white border border-gray-300 rounded-md p-2">
-                  <option value="">Selecione um departamento...</option>
-                  {allDepartments?.map((dept) => (<option key={dept.id} value={dept.id}>{dept.name}</option>))}
-                </select>
-              </div>
+            <div className="flex items-center space-x-2 p-4 border-t">
+              <select id="new_permission_department_id" className="flex-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md">
+                <option value="">Selecione um departamento...</option>
+                {allDepartments?.map((dept) => (<option key={dept.id} value={dept.id}>{dept.name}</option>))}
+              </select>
               <Button type="button" onClick={handleGrantPermission} disabled={grantPermissionMutation.isPending}>
-                <PlusCircle className="h-4 w-4 mr-2" />
                 Conceder
               </Button>
             </div>
           </div>
-
           <div className="flex justify-end space-x-3 pt-6 border-t">
             <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={updateUserMutation.isPending}>

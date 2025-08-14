@@ -1,13 +1,14 @@
 // ARQUIVO COMPLETO E CORRIGIDO: src/hooks/usePermissions.ts
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query'; // Adicionando import que faltava
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 // Hook para buscar as permissões de acesso de um usuário específico
-export function useDepartmentPermissions(userId: string) {
+export function useDepartmentPermissions(userId: string) { // <<< 'export' ADICIONADO AQUI
   return useQuery({
-    queryKey: ['permissions', userId], // A chave da query inclui o ID do usuário
+    queryKey: ['permissions', userId],
     queryFn: async () => {
       if (!userId) return [];
       const { data, error } = await supabase
@@ -32,7 +33,6 @@ export function useGrantPermission() {
     },
     onSuccess: (_, variables) => {
       toast.success('Permissão concedida com sucesso!');
-      // Invalida a query específica das permissões DESTE usuário, forçando a re-busca.
       queryClient.invalidateQueries({ queryKey: ['permissions', variables.user_id] });
     },
     onError: (error: any) => {
@@ -45,16 +45,11 @@ export function useGrantPermission() {
 export function useRevokePermission() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ permissionId, userId }: { permissionId: string, userId: string }) => {
+    mutationFn: async (permissionId: string) => {
       const { error } = await supabase.from('department_access_permissions').delete().eq('id', permissionId);
       if (error) throw error;
-      return { userId }; // Retorna o userId para o onSuccess
     },
-    onSuccess: (data) => {
-      toast.success('Permissão revogada com sucesso!');
-      // Usa o userId retornado para invalidar a query correta
-      queryClient.invalidateQueries({ queryKey: ['permissions', data.userId] });
-    },
+    // onSuccess será tratado na página para ter acesso ao userId
     onError: (error: any) => {
       toast.error(`Falha ao revogar permissão: ${error.message}`);
     },

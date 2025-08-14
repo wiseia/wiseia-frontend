@@ -1,30 +1,25 @@
-// ARQUIVO FINAL E CORRIGIDO: src/pages/DepartmentsPage.tsx (COM LÓGICA MANUAL)
+// ARQUIVO FINAL E CORRIGIDO: src/pages/DepartmentsPage.tsx
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, Department } from '@/lib/supabase';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Building2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CreateDepartmentModal } from './departments/CreateDepartmentModal';
 import { EditDepartmentModal } from './departments/EditDepartmentModal';
 
-// Hook simplificado para buscar os departamentos
+// DEFINIÇÃO DO HOOK QUE ESTAVA FALTANDO
 function useAllDepartments() {
   const { userInfo } = useAuth();
-  return useQuery({
+  return useQuery<Department[]>({
     queryKey: ['departments', userInfo?.company_id],
     queryFn: async () => {
       if (!userInfo?.company_id) return [];
-      const { data, error } = await supabase
-        .from('departments')
-        .select('*') // Busca todos os dados, sem join
-        .eq('company_id', userInfo.company_id)
-        .order('name');
-      
+      const { data, error } = await supabase.from('departments').select('*').eq('company_id', userInfo.company_id).order('name');
       if (error) throw new Error(error.message);
-      return data;
+      return data || [];
     },
     enabled: !!userInfo?.company_id,
   });
@@ -35,69 +30,66 @@ export function DepartmentsPage() {
   const { data: departments, isLoading, error } = useAllDepartments();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
 
-  const canManage = userInfo?.user_roles?.hierarchy_level <= 1;
+  const canManage = userInfo?.hierarchy_level != null && userInfo.hierarchy_level <= 1;
 
-  const handleEdit = (department: any) => {
+  const handleEdit = (department: Department) => {
     setSelectedDepartment(department);
     setIsEditModalOpen(true);
   };
   
-  // NOVA LÓGICA: Criamos um mapa para encontrar os nomes dos pais facilmente
   const departmentMap = new Map(departments?.map(d => [d.id, d.name]));
 
-  if (isLoading) {
-    return <div className="flex justify-center p-8"><LoadingSpinner /></div>;
-  }
-
-  if (error) {
-    return <div className="text-red-500 p-4">Erro ao carregar departamentos: {error.message}</div>;
-  }
+  if (isLoading) return <div className="flex justify-center p-8"><LoadingSpinner /></div>;
+  if (error) return <div className="text-red-500 p-4">Erro: {error.message}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Departamentos</h1>
-          <p className="mt-2 text-gray-600">Gerencie os departamentos e divisões da sua empresa.</p>
+          <h1 className="text-3xl font-bold">Departamentos</h1>
+          <p className="mt-2 text-gray-600">Gerencie os departamentos e divisões.</p>
         </div>
         {canManage && (
           <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Departamento
+            <Plus className="mr-2 h-4 w-4" /> Novo Departamento
           </Button>
         )}
       </div>
       
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg shadow-sm border">
         <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo / Hierarquia</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {departments?.map((dept) => (
+              <tr key={dept.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap font-medium">{dept.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {dept.parent_department_id ? `Divisão de "${departmentMap.get(dept.parent_department_id)}"` : 'Departamento Principal'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  {canManage && <Button variant="ghost" size="sm" onClick={() => handleEdit(dept)}>Editar</Button>}
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {departments?.map((dept) => (
-                <tr key={dept.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{dept.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {/* NOVA LÓGICA: Usamos o mapa para encontrar o nome do pai */}
-                    {dept.parent_department_id 
-                      ? `Divisão de "${departmentMap.get(dept.parent_department_id)}"` 
-                      : 'Departamento Principal'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {canManage && <Button variant="ghost" size="sm" onClick={() => handleEdit(dept)}>Editar</Button>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            ))}
+          </tbody>
         </table>
         {departments?.length === 0 && (
-           <p className="text-center text-gray-500 py-8">Nenhum departamento cadastrado.</p>
+           <div className="text-center text-gray-500 py-8">
+            <p>Nenhum departamento cadastrado.</p>
+            {canManage && (
+                <Button onClick={() => setIsCreateModalOpen(true)} className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" /> Criar Primeiro Departamento
+                </Button>
+            )}
+           </div>
         )}
       </div>
 

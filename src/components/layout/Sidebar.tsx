@@ -1,14 +1,16 @@
-// ARQUIVO CORRIGIDO: src/components/layout/Sidebar.tsx
+// ARQUIVO ATUALIZADO: src/components/layout/Sidebar.tsx
 
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, Building2 } from 'lucide-react'; // Importando o ícone Building2
 import { useAuth } from '@/contexts/AuthContext';
 
+// LISTA DE ITENS DE NAVEGAÇÃO CORRIGIDA
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/documents', label: 'Documentos', icon: FileText },
   { href: '/upload', label: 'Upload', icon: Upload },
   { href: '/users', label: 'Usuários', icon: Users },
+  { href: '/departments', label: 'Departamentos', icon: Building2 }, // <-- ITEM ADICIONADO AQUI
   { href: '/settings', label: 'Configurações', icon: Settings },
 ];
 
