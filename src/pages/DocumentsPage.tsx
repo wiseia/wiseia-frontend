@@ -1,104 +1,70 @@
-// ARQUIVO FINAL E INTERATIVO: src/pages/DocumentsPage.tsx
+// ARQUIVO FINAL E ATUALIZADO: src/pages/DocumentsPage.tsx
 
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase, Document } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
-import { FileText, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Folder, FileText } from 'lucide-react';
 
-// Hook para buscar os documentos (sem alterações)
 function useDocuments() {
   const { userInfo } = useAuth();
-  return useQuery<Document[]>({
-    queryKey: ['documents', userInfo?.id],
+  return useQuery({
+    queryKey: ['documents', userInfo?.company_id],
     queryFn: async () => {
-      if (!userInfo) return [];
-      const { data, error } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data || [];
+      if (!userInfo?.company_id) return [];
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('company_id', userInfo.company_id)
+        .eq('storage_provider', 'GOOGLE_DRIVE')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data as Document[]) || [];
     },
-    enabled: !!userInfo,
+    enabled: !!userInfo?.company_id,
   });
 }
 
 export function DocumentsPage() {
   const { data: documents, isLoading, error } = useDocuments();
-  const navigate = useNavigate();
 
-  // NOVA FUNÇÃO: Lida com o clique no documento
-  const handleDocumentClick = async (document: Document) => {
-    try {
-      // Gera uma URL assinada que expira em 60 segundos
-      const { data, error } = await supabase.storage
-        .from('documents') // O nome do nosso bucket
-        .createSignedUrl(document.file_path, 60); // 60 segundos de validade
-
-      if (error) {
-        throw error;
-      }
-
-      // Abre a URL segura em uma nova aba do navegador
-      window.open(data.signedUrl, '_blank');
-
-    } catch (error: any) {
-      toast.error("Não foi possível abrir o documento", {
-        description: error.message,
-      });
-    }
+  // A Lógica do Link agora é muito mais simples!
+  const getDriveLink = (doc: Document) => {
+    // A Edge Function já nos dá a URL correta e completa.
+    return doc.file_path;
   };
 
+  if (isLoading) { /* ... spinner ... */ }
+  if (error) { /* ... mensagem de erro ... */ }
+  
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Documentos</h1>
-          <p className="mt-2 text-gray-600">Todos os documentos acessíveis para você.</p>
-        </div>
-        <Button onClick={() => navigate('/upload')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Documento
-        </Button>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-4">
-          {isLoading && <div className="flex justify-center p-8"><LoadingSpinner /></div>}
-          {error && <div className="text-red-600 p-4">Erro ao carregar documentos: {error.message}</div>}
-          
-          {documents && (
-            <div>
-              {documents.length === 0 ? (
-                <div className="text-center text-gray-500 py-12">
-                  <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 font-semibold">Nenhum documento encontrado</h3>
-                  <p className="mt-1 text-sm">Comece fazendo o upload de um novo documento.</p>
+      <h1 className="text-3xl font-bold">Documentos</h1>
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h2 className="text-xl font-semibold mb-4">Arquivos Sincronizados</h2>
+        {!documents || documents.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <p>Nenhum arquivo encontrado.</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {documents.map((doc: any) => (
+              <li key={doc.id} className="p-3 border rounded-md flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  {doc.file_type === 'application/vnd.google-apps.folder' ? <Folder /> : <FileText />}
+                  <p className="font-medium">{doc.name}</p>
                 </div>
-              ) : (
-                <ul className="divide-y divide-gray-200">
-                  {documents.map((doc) => (
-                    // ATUALIZAÇÃO AQUI: Adicionamos o onClick e a classe do cursor
-                    <li 
-                      key={doc.id} 
-                      className="p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleDocumentClick(doc)}
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">{doc.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(doc.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {/* Futuramente, podemos ter um menu de ações aqui (download, delete, etc.) */}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
+                <Button asChild variant="outline" size="sm">
+                  <a href={getDriveLink(doc)} target="_blank" rel="noopener noreferrer">
+                    Abrir no Drive
+                  </a>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

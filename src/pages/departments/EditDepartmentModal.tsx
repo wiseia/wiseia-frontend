@@ -1,4 +1,4 @@
-// ARQUIVO COMPLETO: src/pages/departments/EditDepartmentModal.tsx
+// ARQUIVO FINAL E CORRIGIDO: src/pages/departments/EditDepartmentModal.tsx
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, Department } from '@/lib/supabase'; // <--- MUDANÇA #1: Importando nosso tipo Department
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useEffect } from 'react';
@@ -21,7 +21,7 @@ type DepartmentFormData = z.infer<typeof departmentSchema>;
 interface EditDepartmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  department: any;
+  department: Department | null; // <--- MUDANÇA #2: Usando nosso tipo Department
 }
 
 export function EditDepartmentModal({ isOpen, onClose, department }: EditDepartmentModalProps) {
@@ -39,19 +39,26 @@ export function EditDepartmentModal({ isOpen, onClose, department }: EditDepartm
   }, [department, reset]);
 
   const { data: mainDepartments } = useQuery({
-    queryKey: ['main_departments', userInfo?.company_id],
+    queryKey: ['main_departments', userInfo?.company_id, department?.id],
     queryFn: async () => {
-      if (!userInfo?.company_id) return [];
-      const { data, error } = await supabase.from('departments').select('id, name').eq('company_id', userInfo.company_id).is('parent_department_id', null).not('id', 'eq', department.id);
+      if (!userInfo?.company_id || !department) return [];
+      const { data, error } = await supabase.from('departments')
+        .select('id, name')
+        .eq('company_id', userInfo.company_id)
+        .is('parent_department_id', null)
+        .not('id', 'eq', department.id); // Evita que um depto seja pai de si mesmo
       if (error) throw new Error(error.message);
       return data;
     },
-    enabled: !!userInfo?.company_id && isOpen,
+    enabled: !!userInfo?.company_id && isOpen && !!department,
   });
 
   const updateMutation = useMutation({
     mutationFn: async (updatedData: DepartmentFormData) => {
-      const { error } = await supabase.from('departments').update({ name: updatedData.name, parent_department_id: updatedData.parent_department_id || null }).eq('id', department.id);
+      if (!department) throw new Error("Departamento não selecionado");
+      const { error } = await supabase.from('departments')
+        .update({ name: updatedData.name, parent_department_id: updatedData.parent_department_id || null })
+        .eq('id', department.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -59,7 +66,7 @@ export function EditDepartmentModal({ isOpen, onClose, department }: EditDepartm
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       onClose();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Falha ao atualizar: ${error.message}`);
     },
   });
@@ -68,7 +75,7 @@ export function EditDepartmentModal({ isOpen, onClose, department }: EditDepartm
     updateMutation.mutate(data);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !department) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">

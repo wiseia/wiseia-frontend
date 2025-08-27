@@ -1,3 +1,5 @@
-node_modules
+/node_modules
 git rm --cached todos_codigos.txt
 todos_codigos.txt
+/.env
+supabase/.env.local

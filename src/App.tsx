@@ -1,11 +1,11 @@
-// ARQUIVO FINAL E MAIS ROBUSTO: src/App.tsx
+// ARQUIVO FINAL E CORRIGIDO: src/App.tsx
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { ProtectedRoute } from '@/components/ProtectedRoute'; // Nossa guarda de rota
+import { AppLayout } from '@/components/layout/AppLayout';   // Nosso layout principal
 
 // Importando todas as páginas
 import { LoginPage } from '@/pages/LoginPage';
@@ -25,35 +25,30 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Toaster position="top-right" richColors closeButton />
-        
         <Router>
           <Routes>
-            {/* Rota pública */}
+            {/* ROTAS PÚBLICAS: Acessíveis por todos */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             
-            {/* Rota de "container" para o layout principal */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              {/* Todas as páginas que serão renderizadas DENTRO do AppLayout */}
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="documents" element={<DocumentsPage />} />
-              <Route path="upload" element={<UploadPage />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="companies" element={<CompaniesPage />} />
-              <Route path="departments" element={<DepartmentsPage />} />
-              <Route path="settings" element={<SettingsPage />} />
+            {/* ROTAS PROTEGIDAS: Agrupadas sob o ProtectedRoute */}
+            <Route element={<ProtectedRoute />}>
+              {/* Todas as rotas aqui dentro só são acessíveis se o usuário estiver logado */}
+              <Route element={<AppLayout />}>
+                {/* As rotas aqui dentro usarão o layout com sidebar/header */}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/documents" element={<DocumentsPage />} />
+                <Route path="/upload" element={<UploadPage />} />
+                <Route path="/users" element={<UsersPage />} />
+                <Route path="/companies" element={<CompaniesPage />} />
+                <Route path="/departments" element={<DepartmentsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
             </Route>
 
-            {/* Rota de fallback */}
-            <Route path="*" element={<Navigate to="/" />} />
+            {/* Rota de fallback final para qualquer outra coisa */}
+            <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
         </Router>
       </AuthProvider>

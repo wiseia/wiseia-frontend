@@ -1,39 +1,48 @@
-// ARQUIVO: src/hooks/useUsers.ts
+// ARQUIVO CORRIGIDO E RECOMENDADO: src/hooks/useUsers.ts
 
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, FullUserInfo } from '@/lib/supabase'; // Importando FullUserInfo para tipagem correta
 
 export function useUsers() {
   const { userInfo } = useAuth();
 
   return useQuery({
-    queryKey: ['users', userInfo?.company_id, userInfo?.department_id],
+    // A chave da query depende apenas do company_id. Simples e eficaz.
+    queryKey: ['users', userInfo?.company_id],
+    
     queryFn: async () => {
-      if (!userInfo?.company_id) return [];
-
-      // A consulta é filtrada pelo RLS do Supabase, mas adicionamos filtros
-      // no lado do cliente para otimizar e seguir a lógica de negócio.
-      let query = supabase
-        .from('users')
-        .select('*, user_roles(*)') // Puxa o usuário e seu papel relacionado
-        .eq('company_id', userInfo.company_id);
-      
-      // Se o usuário logado for MANAGER ou COORDINATOR, filtramos por departamento
-      if (userInfo.user_roles?.hierarchy_level === 2) {
-        if (userInfo.department_id) {
-          query = query.eq('department_id', userInfo.department_id);
-        } else {
-          // Se um manager não tem depto, ele não pode ver ninguém (exceto ele mesmo, talvez)
-          return []; 
-        }
+      // Guarda de segurança: se não houver company_id, não executa a query.
+      if (!userInfo?.company_id) {
+        return [];
       }
 
-      const { data, error } = await query.order('full_name');
-      if (error) throw new Error(error.message);
-      return data;
+      // Esta é a única query que você precisa.
+      // O Supabase RLS no backend já garante que um usuário só pode ver
+      // outros usuários da mesma empresa. Não precisamos replicar a lógica aqui.
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          user_roles (
+            role_name,
+            hierarchy_level
+          )
+        `)
+        .eq('company_id', userInfo.company_id) // Filtro adicional para otimização
+        .order('full_name');
+
+      if (error) {
+        // Se houver um erro, o exibimos no console para facilitar a depuração.
+        console.error("Erro ao buscar usuários:", error);
+        throw new Error(error.message);
+      }
+      
+      // Retornamos os dados encontrados (ou um array vazio se não houver).
+      return (data as FullUserInfo[]) || [];
     },
-    // A query só é ativada quando as informações do usuário, especialmente company_id, estão disponíveis.
+    
+    // A query só é executada quando temos certeza que o userInfo e o company_id foram carregados.
     enabled: !!userInfo?.company_id,
   });
 }

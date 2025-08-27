@@ -1,8 +1,8 @@
-// ARQUIVO FINAL E SIMPLIFICADO: src/contexts/AuthContext.tsx
+// ARQUIVO FINAL E CORRIGIDO: src/contexts/AuthContext.tsx
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase, FullUserInfo, UserRole } from '@/lib/supabase';
+import { supabase, FullUserInfo } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export interface AuthContextType {
@@ -26,50 +26,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userInfo, setUserInfo] = useState<FullUserInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = async (authUser: SupabaseUser | null): Promise<FullUserInfo | null> => {
-    if (!authUser) return null;
+  const fetchUserProfile = async (authUser: SupabaseUser) => {
     try {
-      const { data: userData, error: userError } = await supabase.from('users').select('*').eq('id', authUser.id).single();
-      if (userError) throw userError;
-      const { data: roleData, error: roleError } = await supabase.from('user_roles').select('*').eq('id', userData.role_id).single();
-      if (roleError) throw roleError;
-      return { ...userData, user_roles: roleData as UserRole };
+      const { data, error } = await supabase.from('users').select('*, user_roles(*)').eq('id', authUser.id).single();
+      if (error) throw error;
+      setUserInfo(data as FullUserInfo);
     } catch (err: any) {
-      console.error("Erro ao buscar perfil:", err.message);
-      return null;
+      toast.error("Falha ao buscar dados do perfil.");
+      setUserInfo(null);
     }
   };
 
   useEffect(() => {
-    // Apenas verifica a sessão ao carregar a primeira vez
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      const profile = await fetchUserProfile(session?.user ?? null);
-      setUserInfo(profile);
       setLoading(false);
-    };
+    });
 
-    checkUser();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        if (event === 'SIGNED_OUT') {
+          setUserInfo(null);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message);
-    } else if (data.user) {
-      // Após o login, busca os dados manualmente
-      setUser(data.user);
-      const profile = await fetchUserProfile(data.user);
-      setUserInfo(profile);
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile(user);
     }
+  }, [user]);
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) toast.error(error.message);
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // Limpa o estado manualmente
-    setUser(null);
-    setUserInfo(null);
   };
 
   const value = { user, userInfo, loading, signIn, signOut };
@@ -77,6 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
       {children}
-    </AuthContext.Provider>
+    </AuthContext.Provider> 
   );
 }

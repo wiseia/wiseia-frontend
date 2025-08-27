@@ -1,98 +1,117 @@
-// ARQUIVO FINAL, COMPLETO E CORRIGIDO: src/pages/DashboardPage.tsx
+// ARQUIVO FINAL, COMPLETO E SEGURO: src/pages/DashboardPage.tsx
 
-import React from 'react'; // Import React
-import { useQuery } from '@tanstack/react-query';
-import { BarChart3, FileText, Users, Clock } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Users, FileText, Building2, Database } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase, Document } from '@/lib/supabase';
+import { useUsers } from '@/hooks/useUsers';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { Department, Document } from '@/lib/supabase';
 
-// ===================================================================
-// DEFINIÇÃO DOS COMPONENTES AUXILIARES
-// ===================================================================
+// Hooks para buscar documentos e departamentos (similares aos que já fizemos)
+const useDocuments = () => {
+  const { userInfo } = useAuth();
+  return useQuery({
+    queryKey: ['documents', userInfo?.company_id],
+    queryFn: async () => {
+      if (!userInfo?.company_id) return [];
+      const { data, error } = await supabase.from('documents').select('*').eq('company_id', userInfo.company_id);
+      return (data as Document[]) || [];
+    },
+    enabled: !!userInfo?.company_id,
+  });
+};
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-}
+const useDepartments = () => {
+  const { userInfo } = useAuth();
+  return useQuery({
+    queryKey: ['departments', userInfo?.company_id],
+    queryFn: async () => {
+      if (!userInfo?.company_id) return [];
+      const { data, error } = await supabase.from('departments').select('*').eq('company_id', userInfo.company_id);
+      return (data as Department[]) || [];
+    },
+    enabled: !!userInfo?.company_id,
+  });
+};
 
-function StatCard({ title, value, icon: Icon }: StatCardProps) {
-  return (
-    <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-      <div className="flex items-center">
-        <div className="rounded-md p-3 bg-blue-50 text-blue-600">
-          <Icon className="h-6 w-6" />
-        </div>
-        <div className="ml-4 flex-1">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ===================================================================
-// O COMPONENTE PRINCIPAL DO DASHBOARD
-// ===================================================================
 
 export function DashboardPage() {
   const { userInfo } = useAuth();
+  
+  // Buscando todos os dados necessários para o dashboard
+  const { data: users, isLoading: loadingUsers } = useUsers();
+  const { data: departments, isLoading: loadingDepartments } = useDepartments();
+  const { data: documents, isLoading: loadingDocuments } = useDocuments();
 
-  const { data: documents, isLoading, error } = useQuery<Document[]>({
-    queryKey: ['documents', userInfo?.id],
-    queryFn: async () => {
-      if (!userInfo) return [];
-      const { data, error } = await supabase.from('documents').select('*');
-      if (error) throw new Error(error.message);
-      return data || [];
-    },
-    enabled: !!userInfo,
-  });
+  // O estado de carregamento geral é true se QUALQUER uma das buscas estiver em andamento
+  const isLoading = loadingUsers || loadingDepartments || loadingDocuments || !userInfo;
 
-  if (!userInfo) {
-    return <div className="flex justify-center p-8"><LoadingSpinner size="lg" /></div>;
+  // A lógica de métricas permanece a mesma, pois é excelente.
+  const metrics = useMemo(() => {
+    if (isLoading || !documents || !users || !departments) return []; // Guarda de segurança
+
+    const totalSize = documents.reduce((acc, doc) => acc + (doc.file_size || 0), 0);
+
+    return [
+      { title: 'Departamentos', value: departments.length, icon: Building2 },
+      { title: 'Usuários da Empresa', value: users.length, icon: Users },
+      { title: 'Documentos da Empresa', value: documents.length, icon: FileText },
+      { title: 'Armazenamento Total', value: `${(totalSize / (1024*1024)).toFixed(2)} MB`, icon: Database },
+    ];
+  }, [isLoading, users, departments, documents]);
+
+
+  // ==========================================================
+  // CORREÇÃO APLICADA AQUI: ESTADO DE CARREGAMENTO
+  // Renderizamos um spinner ENQUANTO os dados estão sendo buscados.
+  // ==========================================================
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-10 bg-gray-200 rounded animate-pulse w-1/3"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gray-200 rounded-lg h-32 animate-pulse" />
+          <div className="bg-gray-200 rounded-lg h-32 animate-pulse" />
+          <div className="bg-gray-200 rounded-lg h-32 animate-pulse" />
+          <div className="bg-gray-200 rounded-lg h-32 animate-pulse" />
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white shadow-lg">
-        <h1 className="text-3xl font-bold mb-2">
-          Bem-vindo, {userInfo.full_name || userInfo.email}!
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Bem-vindo, {userInfo.full_name}!
         </h1>
-        <div className="flex items-center space-x-2">
-          <span className="text-blue-100">Papel:</span>
-          <span className="bg-blue-900/50 px-3 py-1 rounded-full text-sm font-medium">
-            {userInfo.user_roles.role_name}
-          </span>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Documentos Acessíveis"
-          value={isLoading ? '...' : documents?.length ?? 0}
-          icon={FileText}
-        />
-        <StatCard title="Sua Empresa" value={userInfo.company_id ? "Definida" : "N/A"} icon={Users} />
-        <StatCard title="Seu Departamento" value={userInfo.department_id ? "Definido" : "N/A"} icon={Clock} />
-        <StatCard title="Nível de Acesso" value={userInfo.user_roles.hierarchy_level} icon={BarChart3} />
+        <p className="text-gray-600 mt-1">
+          Visão geral das métricas e atividades da sua empresa.
+        </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Seus Documentos</h3>
-        {isLoading && <div className="flex justify-center p-4"><LoadingSpinner /></div>}
-        {error && <div className="text-red-600 p-4">Erro ao carregar dados: {error.message}</div>}
-        {documents && (
-          <div>
-            {documents.length > 0 ? (
-              documents.map((doc) => <div key={doc.id}>{doc.name}</div>)
-            ) : (
-              <p className="text-gray-500 text-center py-4">Nenhum documento encontrado para você.</p>
-            )}
-          </div>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {metrics.map((metric, index) => {
+          const Icon = metric.icon;
+          return (
+            <Card key={index} className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {metric.title}
+                </CardTitle>
+                <Icon className="h-4 w-4 text-gray-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-900">
+                  {metric.value}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

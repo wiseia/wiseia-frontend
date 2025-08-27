@@ -1,0 +1,4 @@
+# config.toml
+spec = 1
+[db]
+  major_version = 15

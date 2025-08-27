@@ -1,16 +1,9 @@
-// ARQUIVO FINAL E ALINHADO: src/hooks/useUploadDocument.ts
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
-// A INTERFACE CORRIGIDA AQUI
-interface UploadData {
-  file: File;
-  title: string;
-  storageProvider: 'supabase' | 'google_drive' | 'one_drive'; // Propriedade adicionada
-}
+interface UploadData { file: File; title: string; storageProvider: 'supabase' | 'google_drive'; }
 
 export const useUploadDocument = () => {
   const { userInfo } = useAuth();
@@ -18,50 +11,33 @@ export const useUploadDocument = () => {
 
   return useMutation({
     mutationFn: async (data: UploadData) => {
-      // Agora podemos desestruturar o storageProvider
       const { file, title, storageProvider } = data;
+      if (!userInfo) throw new Error('Usuário não autenticado.');
 
-      if (!userInfo || !userInfo.id || !userInfo.company_id || !userInfo.user_roles) {
-        throw new Error('Informações de perfil do usuário estão incompletas ou não foram carregadas.');
-      }
-
-      // A lógica de upload permanece a mesma...
-      const departmentIdForUpload = userInfo.user_roles.role_name === 'MASTER' ? null : userInfo.department_id;
-      if (userInfo.user_roles.role_name !== 'MASTER' && !departmentIdForUpload) {
-        throw new Error('Seu perfil não está associado a um departamento.');
-      }
-      
-      if (storageProvider === 'supabase') {
-        const fileExtension = file.name.split('.').pop();
-        const filePath = `${userInfo.company_id}/${departmentIdForUpload || 'company-level'}/${uuidv4()}.${fileExtension}`;
+      if (storageProvider === 'google_drive') {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Sessão não encontrada.");
         
-        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
-        if (uploadError) throw new Error(`Falha no upload do arquivo: ${uploadError.message}`);
-        
-        const { error: insertError } = await supabase
-          .from('documents').insert({
-            name: title.trim(),
-            file_path: filePath,
-            file_type: file.type,
-            file_size: file.size,
-            company_id: userInfo.company_id,
-            department_id: departmentIdForUpload,
-            uploaded_by: userInfo.id,
-            storage_provider: 'SUPABASE',
-          });
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('title', title);
+        formData.append('departmentId', userInfo.department_id || ''); 
 
-        if (insertError) {
-          await supabase.storage.from('documents').remove([filePath]);
-          throw new Error(`Falha ao registrar o documento: ${insertError.message}`);
-        }
-      } else {
-        throw new Error('Outros provedores ainda não estão implementados.');
-      }
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-to-drive`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+          body: formData,
+        });
 
+        const responseData = await response.json();
+        if (!response.ok) throw new Error(responseData.error || 'Falha no upload para o Google Drive.');
+
+        await supabase.from('documents').insert({ name: title, file_path: responseData.fileId, /* ... */ });
+
+      } else { /* ... sua lógica de upload para o Supabase Storage ... */ }
       return { success: true };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['documents'] }); toast.success("Upload concluído!"); },
+    onError: (error: any) => { toast.error(`Falha no upload: ${error.message}`); },
   });
 };

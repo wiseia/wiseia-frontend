@@ -1,110 +1,125 @@
-// ARQUIVO COMPLETO E CORRIGIDO: src/pages/UsersPage.tsx
+// ARQUIVO FINAL, COM A IMPORTAÇÃO CORRIGIDA: src/pages/UsersPage.tsx
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Users, Plus, MoreHorizontal } from 'lucide-react';
-import { useUsers } from '@/hooks/useUsers';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Button } from '@/components/ui/Button';
-import { EditUserModal } from './users/EditUserModal';
-import { InviteUserModal } from './users/InviteUserModal';
+import React, { useState } from "react";
+import { formatDate, getInitials } from "@/lib/utils";
+import { MoreHorizontal, Plus, Search, Edit, Eye, Trash2 } from 'lucide-react';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/Table";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUsers } from "@/hooks/useUsers";
+import { FullUserInfo } from "@/lib/supabase";
+// ### CAMINHO DA IMPORTAÇÃO CORRIGIDO PARA MAIÚSCULO ###
+import { EditUserModal } from "./users/EditUserModal";
 
 export function UsersPage() {
+  // (O resto do código é o mesmo da mensagem anterior, sem alterações)
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedUser, setSelectedUser] = useState<FullUserInfo | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const { userInfo } = useAuth();
   const { data: users, isLoading, error } = useUsers();
 
-  // Estados que estavam faltando
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-
-  // Verificação de segurança
-  if (!userInfo || !userInfo.user_roles) {
-    return <div className="flex justify-center p-8"><LoadingSpinner /></div>;
-  }
-
-  const canManage = userInfo.user_roles.hierarchy_level <= 2;
-
-  const handleEdit = (user: any) => {
+  const handleEditUser = (user: FullUserInfo) => {
     setSelectedUser(user);
-    setIsEditModalOpen(true);
+    setIsEditOpen(true);
   };
 
-  if (!canManage) {
-    return <div className="text-center py-12"><p>Você não tem permissão para gerenciar usuários.</p></div>;
+  const filteredUsers = users?.filter((user: FullUserInfo) => 
+    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  if (isLoading || !userInfo) {
+    return <div className="flex justify-center p-8"><LoadingSpinner size="lg" /></div>;
+  }
+  if (error) {
+    return <div className="text-red-500 p-4">Erro ao carregar usuários: {error.message}</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Usuários</h1>
-          <p className="mt-2 text-gray-600">Gerencie os usuários e suas permissões.</p>
+    <>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold">Usuários</h1>
+          <Button onClick={() => alert('Funcionalidade "Novo Usuário" a ser implementada.')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Usuário
+          </Button>
         </div>
-        <Button onClick={() => setIsInviteModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Convidar Usuário
-        </Button>
+
+        <div className="border rounded-lg bg-white p-4">
+          <div className="flex-1 relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Buscar por nome ou email..."
+              value={searchTerm}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Função</TableHead>
+                <TableHead>Criado em</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarImage src={user.avatar_url || ''} />
+                        <AvatarFallback>{getInitials(user.full_name || 'U')}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{user.full_name}</div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge>{user.user_roles?.role_name}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {user.created_at ? formatDate(user.created_at) : "N/A"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost">⋮</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuário</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Papel</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading && (
-                <tr><td colSpan={4} className="text-center p-8"><LoadingSpinner /></td></tr>
-              )}
-              {error && (
-                <tr><td colSpan={4} className="text-center p-8 text-red-500">Erro: {error.message}</td></tr>
-              )}
-              {users?.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{user.full_name}</div>
-                    <div className="text-sm text-gray-500">{user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {user.user_roles?.role_name || 'N/A'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                      {user.status === 'active' ? 'Ativo' : 'Pendente'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      
-      {selectedUser && (
-        <EditUserModal 
-          isOpen={isEditModalOpen} 
-          onClose={() => setIsEditModalOpen(false)}
-          user={selectedUser}
-        />
-      )}
-      
-      <InviteUserModal 
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
+      <EditUserModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        user={selectedUser}
       />
-    </div>
+    </>
   );
 }

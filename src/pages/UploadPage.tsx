@@ -102,7 +102,7 @@ export function UploadPage() {
             <label htmlFor="storageProvider" className="block text-sm font-medium text-gray-700 mb-2">Destino</label>
             <select id="storageProvider" {...register('storageProvider')} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="supabase">Armazenamento Interno (WISEIA)</option>
-              <option value="google_drive" disabled>Google Drive (em breve)</option>
+              <option value="google_drive">Google Drive</option>
             </select>
           </div>
           <div className="flex justify-end pt-4 space-x-2">
